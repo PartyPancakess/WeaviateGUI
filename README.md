@@ -12,6 +12,8 @@ Frontend:
 
 Backend: <a href="http://nestjs.com/" target="blank">Nestjs</a>
 
+![Dashboard](/Screenshots/Dashboard.png)
+
 ## Get Started
 
 ### Docker
@@ -80,6 +82,15 @@ If WEAVIATE_HTTP_HOST is not given, or its value is 'localhost' or 'host.docker.
 
 <br />
 <br />
+
+## Screenshots
+
+![Collections](/Screenshots/Collections.png)
+![TenantList](/Screenshots/TenantList.png)
+![TenantManage](/Screenshots/TenantManage.png)
+![Vectors](/Screenshots/Vectors.png)
+![Filter](/Screenshots/Filter.png)
+![Migrations](/Screenshots/Migrations.png)
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
