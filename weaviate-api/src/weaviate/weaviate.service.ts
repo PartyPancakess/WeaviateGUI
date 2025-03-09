@@ -85,7 +85,10 @@ export class WeaviateService implements OnModuleInit {
     ]);
     const info = {
       version: meta.version,
-      connection: meta.hostname,
+      connection: meta.hostname.replace(
+        '[::]',
+        this.options.host ?? 'localhost',
+      ),
       isLive,
       isReady,
     };
