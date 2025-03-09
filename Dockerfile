@@ -13,6 +13,7 @@ RUN pnpm run build
 
 WORKDIR /app/weaviate-api
 RUN pnpm install
+RUN pnpm run build
 
 EXPOSE 4173 3000
 
