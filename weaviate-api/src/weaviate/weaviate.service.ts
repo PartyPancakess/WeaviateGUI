@@ -27,7 +27,14 @@ export class WeaviateService implements OnModuleInit {
       this.client = await weaviate.connectToCustom({
         httpHost: this.options.host,
         httpPort: this.options.port,
-        httpSecure: this.options.secure ?? true,
+        httpSecure:
+          this.options.secure !== undefined
+            ? this.options.secure === 'true'
+            : undefined,
+        grpcSecure:
+          this.options.grpcSecure !== undefined
+            ? this.options.secure === 'true'
+            : undefined,
         grpcHost: this.options.grpcHost,
         grpcPort: this.options.grpcPort,
         authCredentials: this.options.apiKey
@@ -38,16 +45,24 @@ export class WeaviateService implements OnModuleInit {
               'X-OpenAI-Api-Key': this.options.openaiApiKey,
             }
           : undefined,
-        skipInitChecks: this.options.skipInitChecks ?? true,
+        skipInitChecks:
+          this.options.skipInitChecks !== undefined
+            ? this.options.skipInitChecks === 'true'
+            : undefined,
       });
     } else {
       console.log('Connecting to local Weaviate instance');
       this.client = await weaviate.connectToLocal({
         host: this.options.host ?? 'localhost',
         port: this.options.port,
+        grpcPort: this.options.grpcPort,
         authCredentials: this.options.apiKey
           ? new weaviate.ApiKey(this.options.apiKey)
           : undefined,
+        skipInitChecks:
+          this.options.skipInitChecks !== undefined
+            ? this.options.skipInitChecks === 'true'
+            : undefined,
         headers: this.options.openaiApiKey
           ? {
               'X-OpenAI-Api-Key': this.options.openaiApiKey,

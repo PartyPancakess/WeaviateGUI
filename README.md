@@ -54,8 +54,9 @@ pnpm run start:dev
 - WEAVIATE_GRPC_HOST: grpc host of the Weaviate instance if required for connection
 - WEAVIATE_GRPC_PORT: grpc port
 - WEAVIATE_API_KEY: Weaviate api key if set
-- WEAVIATE_SKIP_INIT_CHECKS: Weaviate connection parameter (default true)
-- WEAVIATE_SECURE: Weaviate connection parameter (http secure, default true)
+- WEAVIATE_SKIP_INIT_CHECKS: Weaviate connection parameter
+- WEAVIATE_HTTP_SECURE: Weaviate connection parameter
+- WEAVIATE_GRPC_SECURE: Weaviate connection parameter
 - WEAVIATE_CONTAINER_NAME: if you are hosting Weaviate locally through docker, need to set this to Weaviate container name
 - OPENAI_API_KEY: If you want to connect openai api to Weaviate (to allow Weaviate to generate vectors)
 
