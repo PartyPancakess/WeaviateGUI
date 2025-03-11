@@ -42,6 +42,7 @@
           "
           placeholder="Select a collection"
           style="width: 90%"
+          filterable
         ></n-select>
       </div>
       <n-divider />
@@ -57,6 +58,7 @@
           "
           placeholder="Select a collection"
           style="width: 90%"
+          filterable
         ></n-select>
       </div>
       <n-divider />

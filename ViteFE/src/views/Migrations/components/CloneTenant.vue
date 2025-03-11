@@ -39,6 +39,7 @@
           placeholder="Select a source collection"
           style="width: 90%"
           @update:value="onCollectionChange"
+          filterable
         ></n-select>
       </div>
       <n-divider />
@@ -54,6 +55,7 @@
           "
           placeholder="Select a target collection"
           style="width: 90%"
+          filterable
         ></n-select>
       </div>
       <n-divider />
@@ -69,6 +71,7 @@
           "
           placeholder="Select a source tenant"
           style="width: 90%"
+          filterable
         ></n-select>
       </div>
       <n-divider />

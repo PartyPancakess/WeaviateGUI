@@ -16,6 +16,7 @@
               placeholder="Select a collection"
               style="width: 20%"
               @update:value="onCollectionChange"
+              filterable
             ></n-select>
           </div>
           <div
@@ -33,6 +34,7 @@
               "
               placeholder="Select a tenantList"
               style="width: 20%"
+              filterable
             ></n-select>
           </div>
         </div>
