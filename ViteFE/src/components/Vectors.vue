@@ -468,7 +468,7 @@ async function getData() {
     // Not sure if this is the best way to calculate the width of each property column, and track it
     const childWidth = ref((window.innerWidth * 0.4) / propList.length);
 
-    window.addEventListener('resize', () => {
+    window.addEventListener("resize", () => {
       childWidth.value = (window.innerWidth * 0.4) / propList.length;
     });
 
@@ -507,12 +507,25 @@ async function getData() {
 getData();
 
 function fillForm(data: any[]) {
-  formData.value = data.map((item) => ({
-    uuid: String(item.uuid),
-    vector: item.vectors,
-    ...item.properties,
-    ...item.metadata,
-  }));
+  formData.value = data.map((item) => {
+    const processedProperties = Object.entries(item.properties).reduce(
+      (acc: Record<string, any>, [key, value]) => {
+        acc[key] =
+          value != null && typeof value === "object"
+            ? JSON.stringify(value, null, 2)
+            : value;
+        return acc;
+      },
+      {}
+    );
+
+    return {
+      uuid: String(item.uuid),
+      vector: item.vectors,
+      ...processedProperties,
+      ...item.metadata,
+    };
+  });
 }
 
 function openVectorModal(vector: any) {
@@ -579,10 +592,13 @@ async function handleSearch() {
 
     // Set columns with properties
     if (vectors.length > 0) {
-      const childWidth = ref((window.innerWidth * 0.4) / Object.keys(vectors[0].properties).length);
+      const childWidth = ref(
+        (window.innerWidth * 0.4) / Object.keys(vectors[0].properties).length
+      );
 
-      window.addEventListener('resize', () => {
-        childWidth.value = (window.innerWidth * 0.4) / Object.keys(vectors[0].properties).length;
+      window.addEventListener("resize", () => {
+        childWidth.value =
+          (window.innerWidth * 0.4) / Object.keys(vectors[0].properties).length;
       });
       columns.value[2].children = Object.keys(vectors[0].properties).map(
         (property) => ({
