@@ -61,7 +61,12 @@
           Clone
         </n-button>
       </div>
-      <div v-else>
+      <div
+        v-else
+        style="max-height: 300px; overflow-y: auto"
+        ref="scrollContainer"
+        @scroll="handleScroll"
+      >
         <p style="display: flex; left: 0">Process Status</p>
         <pre>{{ cloneStatus }}</pre>
       </div>
@@ -122,6 +127,36 @@ async function handleCloneCollection() {
     eventSource.close();
   };
 }
+
+// Scroll Logic
+const scrollContainer = ref<HTMLElement | null>(null);
+const isScrolledToBottom = ref(true);
+
+// Threshold in pixels
+const threshold = 10;
+
+const handleScroll = () => {
+  const container = scrollContainer.value;
+  if (container) {
+    isScrolledToBottom.value =
+      container.scrollTop + container.clientHeight >=
+      container.scrollHeight - threshold;
+  }
+};
+
+const scrollToBottom = () => {
+  const container = scrollContainer.value;
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+};
+
+watch(cloneStatus, async () => {
+  await nextTick(); // Wait for the DOM to update
+  if (isScrolledToBottom.value) {
+    scrollToBottom();
+  }
+});
 </script>
 
 <style scoped></style>
