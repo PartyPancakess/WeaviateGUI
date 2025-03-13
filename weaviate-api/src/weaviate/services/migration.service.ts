@@ -167,7 +167,7 @@ export class MigrationService extends BaseWeaviateService {
         const srcTenant = srcColl.withTenant(tenant.name);
         const targetTenant = targetColl.withTenant(tenant.name);
 
-        const objects = (await srcTenant.query.fetchObjects())?.objects;
+        const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
 
         if (objects && objects.length > 0) {
           await targetTenant.data.insertMany(objects);
@@ -189,7 +189,7 @@ export class MigrationService extends BaseWeaviateService {
       }
     } else {
       // If multiTenancy is not enabled, clone the objects
-      const objects = (await srcColl.query.fetchObjects())?.objects;
+      const objects = (await srcColl.query.fetchObjects({includeVector: true}))?.objects;
       if (objects && objects.length > 0) {
         await targetColl.data.insertMany(objects);
       }
@@ -237,7 +237,7 @@ export class MigrationService extends BaseWeaviateService {
     const srcTenant = srcColl.withTenant(data.sourceTenant);
     const targetTenant = targetColl.withTenant(data.targetTenant);
 
-    const objects = (await srcTenant.query.fetchObjects())?.objects;
+    const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
     if (objects && objects.length > 0) {
       await targetTenant.data.insertMany(objects);
     }
@@ -311,7 +311,7 @@ export class MigrationService extends BaseWeaviateService {
         // Migrate objects from source tenant to target tenant
         const srcTenant = srcColl.withTenant(tenant.name);
         const targetTenant = targetColl.withTenant(tenant.name);
-        const objects = (await srcTenant.query.fetchObjects())?.objects;
+        const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
 
         if (objects && objects.length > 0) {
           await targetTenant.data.insertMany(objects);
@@ -333,7 +333,7 @@ export class MigrationService extends BaseWeaviateService {
       }
     } else {
       // If multiTenancy is not enabled, clone the objects
-      const objects = (await srcColl.query.fetchObjects())?.objects;
+      const objects = (await srcColl.query.fetchObjects({includeVector: true}))?.objects;
       if (objects && objects.length > 0) {
         await targetColl.data.insertMany(objects);
       }
@@ -367,7 +367,7 @@ export class MigrationService extends BaseWeaviateService {
     const srcTenant = srcColl.withTenant(data.sourceTenant);
     const targetTenant = targetColl.withTenant(data.targetTenant);
 
-    const objects = (await srcTenant.query.fetchObjects())?.objects;
+    const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
     if (objects && objects.length > 0) {
       await targetTenant.data.insertMany(objects);
     }
