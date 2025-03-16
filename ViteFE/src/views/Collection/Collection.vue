@@ -80,6 +80,7 @@
                 width: 200px;
                 height: 200px;
                 margin-right: 50px;
+                margin-bottom: 20px;
                 padding: 0;
               "
               @click="manageTenant(tenant)"
