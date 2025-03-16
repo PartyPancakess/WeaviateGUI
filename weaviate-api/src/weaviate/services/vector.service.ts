@@ -38,8 +38,10 @@ export class VectorService extends BaseWeaviateService {
       dto.includeVector = dto.includeVector === 'true';
     }
 
+    const maxItems = await collection.length();
+
     const options = {
-      limit: dto.limit || undefined,
+      limit: dto.limit ? Math.min(dto.limit, maxItems) : undefined,
       offset: dto.offset || undefined,
       includeVector: dto.includeVector,
       distance: dto.maxDistance,
