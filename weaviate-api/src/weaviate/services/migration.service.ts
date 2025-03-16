@@ -10,6 +10,7 @@ import { CopyTenantDto } from '../dto/copy-tenant.dto';
 import { BackupDto } from '../dto/backup.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { RestoreDto } from '../dto/restore.dto';
+import { Collection } from 'weaviate-client';
 
 export interface StatusMessage {
   data: string;
@@ -107,6 +108,63 @@ export class MigrationService extends BaseWeaviateService {
     }
   }
 
+  // Below is taken from weaviate docs
+  async migrateData(
+    collection_src: Collection,
+    collection_tgt: Collection,
+    subject: Subject<StatusMessage>,
+    batchSize = 500,
+  ): Promise<number> {
+    const maxItems = await collection_src.length();
+    if (maxItems === 0) return 0;
+    let counter: number = 0;
+    let itemsToInsert = [];
+
+    for await (const item of collection_src.iterator({ includeVector: true })) {
+      // Check if we've reached the maximum items
+      if (counter >= maxItems) {
+        subject.next({
+          data: `Reached maximum items limit of ${maxItems}\n`,
+        });
+        break;
+      }
+
+      counter++;
+
+      let objectToInsert = {
+        properties: item.properties,
+        uuid: item.uuid,
+        vectors: item.vectors.default ? item.vectors.default : item.vectors,
+        // references: item.references,
+      };
+
+      // Add object to batching array
+      itemsToInsert.push(objectToInsert);
+
+      if (itemsToInsert.length === batchSize || counter === maxItems) {
+        try {
+          const response = await collection_tgt.data.insertMany(itemsToInsert);
+
+          if (response.hasErrors) {
+            throw new Error('Error in batch import!');
+          }
+
+          // subject.next({
+          //   data: `Successfully imported batch of ${itemsToInsert.length} items.`,
+          // });
+          itemsToInsert = [];
+        } catch (error) {
+          subject.next({
+            data: `Error importing batch: ${error}\n`,
+          });
+          return undefined;
+        }
+      }
+    }
+
+    return counter;
+  }
+
   async cloneCollection(
     data: CloneCollectionDto,
     subject: Subject<StatusMessage>,
@@ -167,29 +225,16 @@ export class MigrationService extends BaseWeaviateService {
         const srcTenant = srcColl.withTenant(tenant.name);
         const targetTenant = targetColl.withTenant(tenant.name);
 
-        // TODO: Does the fetch objects limit have a default? If so, need to do iterator instead to migrate.
-        // Reason for not doing iterator in the first place: Too slow.
-        // Also, when doing iteration in a tenant, even after all the tenant objects are iterated over, it keeps going. Are other tenants' objects bleeding over? Same with fetching and vector searching with limit.
-        // If limit is set and is a bigger number than the no of objects in the tenant, it gives the no of limit objects. Where do those extra objects come from?
-        const objects = (
-          await srcTenant.query.fetchObjects({ includeVector: true })
-        )?.objects;
+        const inserted = await this.migrateData(
+          srcTenant,
+          targetTenant,
+          subject,
+        );
 
-        // TODO: If I do not map the objects like below before inserting, even though the properties and vectors show up when fetched just fine,
-        // doing a vector search does not return any results. Need to find root cause.
-        if (objects && objects.length > 0) {
-          await targetTenant.data.insertMany(
-            objects.map((obj) => ({
-              properties: obj.properties,
-              vectors: obj.vectors.default
-                ? { default: obj.vectors.default }
-                : obj.vectors,
-              references: obj.references,
-            })),
-          );
-        }
-
-        subject.next({ data: `Copied tenant contents: ${tenant.name}` });
+        if (inserted !== undefined && inserted !== 0)
+          subject.next({
+            data: `Copied tenant contents: ${tenant.name}, count: ${inserted}`,
+          });
 
         if (data.disableTenants) {
           // Disable the tenants
@@ -205,20 +250,11 @@ export class MigrationService extends BaseWeaviateService {
       }
     } else {
       // If multiTenancy is not enabled, clone the objects
-      const objects = (
-        await srcColl.query.fetchObjects({ includeVector: true })
-      )?.objects;
-      if (objects && objects.length > 0) {
-        await targetColl.data.insertMany(
-          objects.map((obj) => ({
-            properties: obj.properties,
-            vectors: obj.vectors.default
-              ? { default: obj.vectors.default }
-              : obj.vectors,
-            references: obj.references,
-          })),
-        );
-      }
+      const inserted = await this.migrateData(srcColl, targetColl, subject);
+      if (inserted !== undefined && inserted !== 0)
+        subject.next({
+          data: `Copied collection contents, count: ${inserted}`,
+        });
     }
 
     subject.next({
@@ -263,22 +299,11 @@ export class MigrationService extends BaseWeaviateService {
     const srcTenant = srcColl.withTenant(data.sourceTenant);
     const targetTenant = targetColl.withTenant(data.targetTenant);
 
-    const objects = (
-      await srcTenant.query.fetchObjects({ includeVector: true })
-    )?.objects;
-    if (objects && objects.length > 0) {
-      await targetTenant.data.insertMany(
-        objects.map((obj) => ({
-          properties: obj.properties,
-          vectors: obj.vectors.default
-            ? { default: obj.vectors.default }
-            : obj.vectors,
-          references: obj.references,
-        })),
-      );
-    }
-
-    subject.next({ data: `Copied tenant contents` });
+    const inserted = await this.migrateData(srcTenant, targetTenant, subject);
+    if (inserted !== undefined && inserted !== 0)
+      subject.next({
+        data: `Copied tenant contents, count: ${inserted}`,
+      });
 
     if (data.disableTenants) {
       await srcColl.tenants.update({
@@ -347,23 +372,16 @@ export class MigrationService extends BaseWeaviateService {
         // Migrate objects from source tenant to target tenant
         const srcTenant = srcColl.withTenant(tenant.name);
         const targetTenant = targetColl.withTenant(tenant.name);
-        const objects = (
-          await srcTenant.query.fetchObjects({ includeVector: true })
-        )?.objects;
 
-        if (objects && objects.length > 0) {
-          await targetTenant.data.insertMany(
-            objects.map((obj) => ({
-              properties: obj.properties,
-              vectors: obj.vectors.default
-                ? { default: obj.vectors.default }
-                : obj.vectors,
-              references: obj.references,
-            })),
-          );
-        }
-
-        subject.next({ data: `Copied tenant contents: ${tenant.name}` });
+        const inserted = await this.migrateData(
+          srcTenant,
+          targetTenant,
+          subject,
+        );
+        if (inserted !== undefined && inserted !== 0)
+          subject.next({
+            data: `Copied tenant contents: ${tenant.name}, count: ${inserted}`,
+          });
 
         if (data.disableTenants) {
           // Disable the tenants
@@ -379,20 +397,11 @@ export class MigrationService extends BaseWeaviateService {
       }
     } else {
       // If multiTenancy is not enabled, clone the objects
-      const objects = (
-        await srcColl.query.fetchObjects({ includeVector: true })
-      )?.objects;
-      if (objects && objects.length > 0) {
-        await targetColl.data.insertMany(
-          objects.map((obj) => ({
-            properties: obj.properties,
-            vectors: obj.vectors.default
-              ? { default: obj.vectors.default }
-              : obj.vectors,
-            references: obj.references,
-          })),
-        );
-      }
+      const inserted = await this.migrateData(srcColl, targetColl, subject);
+      if (inserted !== undefined && inserted !== 0)
+        subject.next({
+          data: `Copied collection contents, count: ${inserted}`,
+        });
     }
 
     subject.next({
@@ -423,22 +432,11 @@ export class MigrationService extends BaseWeaviateService {
     const srcTenant = srcColl.withTenant(data.sourceTenant);
     const targetTenant = targetColl.withTenant(data.targetTenant);
 
-    const objects = (
-      await srcTenant.query.fetchObjects({ includeVector: true })
-    )?.objects;
-    if (objects && objects.length > 0) {
-      await targetTenant.data.insertMany(
-        objects.map((obj) => ({
-          properties: obj.properties,
-          vectors: obj.vectors.default
-            ? { default: obj.vectors.default }
-            : obj.vectors,
-          references: obj.references,
-        })),
-      );
-    }
-
-    subject.next({ data: `Copied tenant contents` });
+    const inserted = await this.migrateData(srcTenant, targetTenant, subject);
+    if (inserted !== undefined && inserted !== 0)
+      subject.next({
+        data: `Copied tenant contents, count: ${inserted}`,
+      });
 
     if (data.disableTenants) {
       await srcColl.tenants.update({

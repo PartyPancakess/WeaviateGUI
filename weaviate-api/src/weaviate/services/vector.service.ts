@@ -43,7 +43,7 @@ export class VectorService extends BaseWeaviateService {
       offset: dto.offset || undefined,
       includeVector: dto.includeVector,
       distance: dto.maxDistance,
-      returnMetadata: ['creationTime', 'updateTime', 'score'],
+      returnMetadata: ['creationTime', 'updateTime'],
       filters: dto.filter
         ? createFilterValue(
             JSON.parse(dto.filter) as FilterGroupModel,
@@ -59,18 +59,21 @@ export class VectorService extends BaseWeaviateService {
         list = await collection.query.fetchObjects(options as any);
       } else {
         if (dto.searchType == null || dto.searchType === 'keyword') {
+          options.returnMetadata.push('score');
           list = await collection.query.bm25(
             dto.query as string,
             options as any,
           );
         } else if (dto.searchType === 'nearVector') {
           options.returnMetadata.push('distance');
+          options.returnMetadata.push('certainty');
           list = await collection.query.nearVector(
             JSON.parse(dto.query) as number[],
             options as any,
           );
         } else if (dto.searchType === 'nearText') {
           options.returnMetadata.push('distance');
+          options.returnMetadata.push('certainty');
           list = await collection.query.nearText(dto.query, options as any);
         }
       }
@@ -165,7 +168,6 @@ export class VectorService extends BaseWeaviateService {
       id: vector.vectorId,
       properties: vector.properties,
       vectors: vector.vectors,
-    })
-    
+    });
   }
 }
