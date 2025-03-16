@@ -167,10 +167,26 @@ export class MigrationService extends BaseWeaviateService {
         const srcTenant = srcColl.withTenant(tenant.name);
         const targetTenant = targetColl.withTenant(tenant.name);
 
-        const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
+        // TODO: Does the fetch objects limit have a default? If so, need to do iterator instead to migrate.
+        // Reason for not doing iterator in the first place: Too slow.
+        // Also, when doing iteration in a tenant, even after all the tenant objects are iterated over, it keeps going. Are other tenants' objects bleeding over? Same with fetching and vector searching with limit.
+        // If limit is set and is a bigger number than the no of objects in the tenant, it gives the no of limit objects. Where do those extra objects come from?
+        const objects = (
+          await srcTenant.query.fetchObjects({ includeVector: true })
+        )?.objects;
 
+        // TODO: If I do not map the objects like below before inserting, even though the properties and vectors show up when fetched just fine,
+        // doing a vector search does not return any results. Need to find root cause.
         if (objects && objects.length > 0) {
-          await targetTenant.data.insertMany(objects);
+          await targetTenant.data.insertMany(
+            objects.map((obj) => ({
+              properties: obj.properties,
+              vectors: obj.vectors.default
+                ? { default: obj.vectors.default }
+                : obj.vectors,
+              references: obj.references,
+            })),
+          );
         }
 
         subject.next({ data: `Copied tenant contents: ${tenant.name}` });
@@ -189,9 +205,19 @@ export class MigrationService extends BaseWeaviateService {
       }
     } else {
       // If multiTenancy is not enabled, clone the objects
-      const objects = (await srcColl.query.fetchObjects({includeVector: true}))?.objects;
+      const objects = (
+        await srcColl.query.fetchObjects({ includeVector: true })
+      )?.objects;
       if (objects && objects.length > 0) {
-        await targetColl.data.insertMany(objects);
+        await targetColl.data.insertMany(
+          objects.map((obj) => ({
+            properties: obj.properties,
+            vectors: obj.vectors.default
+              ? { default: obj.vectors.default }
+              : obj.vectors,
+            references: obj.references,
+          })),
+        );
       }
     }
 
@@ -237,9 +263,19 @@ export class MigrationService extends BaseWeaviateService {
     const srcTenant = srcColl.withTenant(data.sourceTenant);
     const targetTenant = targetColl.withTenant(data.targetTenant);
 
-    const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
+    const objects = (
+      await srcTenant.query.fetchObjects({ includeVector: true })
+    )?.objects;
     if (objects && objects.length > 0) {
-      await targetTenant.data.insertMany(objects);
+      await targetTenant.data.insertMany(
+        objects.map((obj) => ({
+          properties: obj.properties,
+          vectors: obj.vectors.default
+            ? { default: obj.vectors.default }
+            : obj.vectors,
+          references: obj.references,
+        })),
+      );
     }
 
     subject.next({ data: `Copied tenant contents` });
@@ -311,10 +347,20 @@ export class MigrationService extends BaseWeaviateService {
         // Migrate objects from source tenant to target tenant
         const srcTenant = srcColl.withTenant(tenant.name);
         const targetTenant = targetColl.withTenant(tenant.name);
-        const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
+        const objects = (
+          await srcTenant.query.fetchObjects({ includeVector: true })
+        )?.objects;
 
         if (objects && objects.length > 0) {
-          await targetTenant.data.insertMany(objects);
+          await targetTenant.data.insertMany(
+            objects.map((obj) => ({
+              properties: obj.properties,
+              vectors: obj.vectors.default
+                ? { default: obj.vectors.default }
+                : obj.vectors,
+              references: obj.references,
+            })),
+          );
         }
 
         subject.next({ data: `Copied tenant contents: ${tenant.name}` });
@@ -333,9 +379,19 @@ export class MigrationService extends BaseWeaviateService {
       }
     } else {
       // If multiTenancy is not enabled, clone the objects
-      const objects = (await srcColl.query.fetchObjects({includeVector: true}))?.objects;
+      const objects = (
+        await srcColl.query.fetchObjects({ includeVector: true })
+      )?.objects;
       if (objects && objects.length > 0) {
-        await targetColl.data.insertMany(objects);
+        await targetColl.data.insertMany(
+          objects.map((obj) => ({
+            properties: obj.properties,
+            vectors: obj.vectors.default
+              ? { default: obj.vectors.default }
+              : obj.vectors,
+            references: obj.references,
+          })),
+        );
       }
     }
 
@@ -367,9 +423,19 @@ export class MigrationService extends BaseWeaviateService {
     const srcTenant = srcColl.withTenant(data.sourceTenant);
     const targetTenant = targetColl.withTenant(data.targetTenant);
 
-    const objects = (await srcTenant.query.fetchObjects({includeVector: true}))?.objects;
+    const objects = (
+      await srcTenant.query.fetchObjects({ includeVector: true })
+    )?.objects;
     if (objects && objects.length > 0) {
-      await targetTenant.data.insertMany(objects);
+      await targetTenant.data.insertMany(
+        objects.map((obj) => ({
+          properties: obj.properties,
+          vectors: obj.vectors.default
+            ? { default: obj.vectors.default }
+            : obj.vectors,
+          references: obj.references,
+        })),
+      );
     }
 
     subject.next({ data: `Copied tenant contents` });
