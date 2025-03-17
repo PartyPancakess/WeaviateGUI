@@ -50,8 +50,12 @@
               gap: 16px;
             "
           >
-            <n-button @click="renderChart('PCA', vectorList)">Render with PCA</n-button>
-            <n-button @click="renderChart('UMAP', vectorList)">Render with UMAP</n-button>
+            <n-button @click="renderChart('PCA', vectorList)"
+              >Render with PCA</n-button
+            >
+            <n-button @click="renderChart('UMAP', vectorList)"
+              >Render with UMAP</n-button
+            >
           </div>
           <!-- Chart container -->
           <div
@@ -93,18 +97,22 @@ async function getData() {
 getData();
 
 async function onCollectionChange(collection: string) {
+  selectedTenant.value = undefined;
   selectedCollection.value = collection;
-  tenantList.value = await visualizeService.getTenantNames(collection);
-  try {
-    const vectors = await vectorService.getVectorList({
-      collectionName: collection,
-      includeVector: true,
-    });
-    vectorList.value = vectors.map(
-      (vector) => Object.values(vector.vectors)[0]
-    ) as number[][];
-  } catch (error) {
-    vectorList.value = [];
+  const tenants = await visualizeService.getTenantNames(collection);
+  tenantList.value = tenants;
+  if (tenants == null) {
+    try {
+      const vectors = await vectorService.getVectorList({
+        collectionName: collection,
+        includeVector: true,
+      });
+      vectorList.value = vectors.map(
+        (vector) => Object.values(vector.vectors)[0]
+      ) as number[][];
+    } catch (error) {
+      vectorList.value = [];
+    }
   }
 }
 
