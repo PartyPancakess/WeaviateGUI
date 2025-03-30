@@ -129,9 +129,32 @@ export class VectorService extends BaseWeaviateService {
       collection = collection.withTenant(vector.tenantName);
     }
 
+    const config = await collection.config.get();
+
+    const propertyMap = new Map(
+      config.properties.map((prop) => [prop.name, prop.dataType]),
+    );
+
+    const castedProperties = Object.fromEntries(
+      Object.entries(vector.data.properties).map(([key, value]) => {
+        const dataType = propertyMap.get(key);
+        if (dataType.endsWith('[]')) {
+          return [key, JSON.parse(value)];
+        } else if (dataType === 'number' || dataType === 'int') {
+          return [key, Number(value)];
+        } else if (dataType === 'boolean') {
+          return [key, Boolean(value)];
+        } else if (dataType === 'object') {
+          return [key, JSON.parse(value)];
+        } else {
+          return [key, String(value)];
+        }
+      }),
+    );
+
     return await collection.data.insert({
       id: vector.data.customId,
-      properties: vector.data.properties,
+      properties: castedProperties,
       vectors: vector.data.vectors,
     });
   }

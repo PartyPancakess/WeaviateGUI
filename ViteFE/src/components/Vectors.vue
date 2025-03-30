@@ -513,7 +513,7 @@ function fillForm(data: any[]) {
         acc[key] =
           value != null && typeof value === "object"
             ? JSON.stringify(value, null, 2)
-            : value;
+            : String(value);
         return acc;
       },
       {}
