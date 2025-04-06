@@ -189,7 +189,9 @@ export class MigrationService extends BaseWeaviateService {
         targetConfig,
       ); // Update with the removed config, it works when updating, but not creating
 
-      subject.next({ data: `Created collection: ${data.cloneName}` });
+      subject.next({
+        data: `Created collection: ${data.cloneName}. Copying...`,
+      });
     } catch (error) {
       subject.next({
         data: `Failed\n`,
@@ -205,12 +207,14 @@ export class MigrationService extends BaseWeaviateService {
       subject.next({ data: `Going tenant by tenant` });
       const tenants = await srcColl.tenants.get();
 
+      // Create all tenants in the target collection
+      await targetColl.tenants.create(
+        Object.keys(tenants).map((tenant) => ({ name: tenant })),
+      );
+      subject.next({ data: `Created all tenants. Copying...` });
+
       // Go through each tenant
       for (const tenant of Object.values(tenants)) {
-        // Create tenant in the target collection
-        await targetColl.tenants.create({ name: tenant.name });
-        subject.next({ data: `Created tenant: ${tenant.name}` });
-
         // Activate Tenants
         await srcColl.tenants.update({
           name: tenant.name,
@@ -284,7 +288,7 @@ export class MigrationService extends BaseWeaviateService {
     });
 
     await targetColl.tenants.create({ name: data.targetTenant });
-    subject.next({ data: `Created tenant: ${data.targetTenant}` });
+    subject.next({ data: `Created tenant: ${data.targetTenant}. Copying...` });
 
     // Activate Tenants
     await srcColl.tenants.update({
@@ -350,28 +354,34 @@ export class MigrationService extends BaseWeaviateService {
       // If multiTenancy is enabled, copy the tenants
       subject.next({ data: `Going tenant by tenant` });
       const tenants = await srcColl.tenants.get();
+      const targetTenants = Object.keys(await targetColl.tenants.get());
+
+      const newTenants = Object.keys(tenants).filter(
+        (tenant) =>
+          !targetTenants.some((targetTenant) => targetTenant === tenant),
+      );
+
+      // Create all tenants in the target collection, if do not exist already
+      await targetColl.tenants.create(
+        newTenants.map((tenant) => ({ name: tenant })),
+      );
+      subject.next({ data: `Created all new tenants. Copying...` });
 
       // Go through each tenant
-      for (const tenant of Object.values(tenants)) {
-        if ((await targetColl.tenants.getByName(tenant.name)) == null) {
-          // Create tenant in the target collection, if does not exist already
-          await targetColl.tenants.create({ name: tenant.name });
-          subject.next({ data: `Created tenant: ${tenant.name}` });
-        }
-
+      for (const tenant of newTenants) {
         // Activate Tenants
         await srcColl.tenants.update({
-          name: tenant.name,
+          name: tenant,
           activityStatus: 'HOT',
         });
         await targetColl.tenants.update({
-          name: tenant.name,
+          name: tenant,
           activityStatus: 'HOT',
         });
 
         // Migrate objects from source tenant to target tenant
-        const srcTenant = srcColl.withTenant(tenant.name);
-        const targetTenant = targetColl.withTenant(tenant.name);
+        const srcTenant = srcColl.withTenant(tenant);
+        const targetTenant = targetColl.withTenant(tenant);
 
         const inserted = await this.migrateData(
           srcTenant,
@@ -380,17 +390,17 @@ export class MigrationService extends BaseWeaviateService {
         );
         if (inserted !== undefined && inserted !== 0)
           subject.next({
-            data: `Copied tenant contents: ${tenant.name}, count: ${inserted}`,
+            data: `Copied tenant contents: ${tenant}, count: ${inserted}`,
           });
 
         if (data.disableTenants) {
           // Disable the tenants
           await srcColl.tenants.update({
-            name: tenant.name,
+            name: tenant,
             activityStatus: 'COLD',
           });
           await targetColl.tenants.update({
-            name: tenant.name,
+            name: tenant,
             activityStatus: 'COLD',
           });
         }
@@ -467,7 +477,7 @@ export class MigrationService extends BaseWeaviateService {
     if (data.enableTenants) {
       try {
         subject.next({
-          data: `Enabling all relevant tenants.\n`,
+          data: `Enabling all relevant tenants...\n`,
         });
         for (const collection of Object.values(data.collections)) {
           const coll = this.client.collections.get(collection);
