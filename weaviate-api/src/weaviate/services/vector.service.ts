@@ -93,6 +93,14 @@ export class VectorService extends BaseWeaviateService {
     }
 
     try {
+      const itemCount = await collection.length();
+      if (itemCount === 0) {
+        return 0;
+      }
+      if ((dto.query === undefined || dto.query.length === 0) && !dto.filter) {
+        return itemCount;
+      }
+
       if (dto.query === undefined || dto.query.length === 0) {
         const list = await collection.query.fetchObjects({
           includeVector: false,
@@ -103,6 +111,7 @@ export class VectorService extends BaseWeaviateService {
                 collection,
               )
             : undefined,
+          limit: itemCount, // TODO: check if this causes issues if itemCount is too big
         });
         return list.objects.length;
       }
@@ -116,6 +125,7 @@ export class VectorService extends BaseWeaviateService {
               collection,
             )
           : undefined,
+        limit: itemCount,
       });
       return list.objects.length;
     } catch (error) {
